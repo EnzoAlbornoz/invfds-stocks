@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+    <modelVersion>4.0.0</modelVersion>
+    <packaging>jar</packaging>
+    <name>stocks</name>
+    <artifactId>stocks</artifactId>
+    <groupId>br.ufsc.investfunds</groupId>
+    <version>0.0.1</version>
+
+    <description>Public Company module for InvestFunds project</description>
+
+    <url>https://github.com/EnzoAlbornoz/investfunds-stocks</url>
+
+    <licenses>
+        <license>
+            <name>MIT</name>
+            <url>https://spdx.org/licenses/MIT.html</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <organization>
+        <name>Universidade Federal de Santa Catarina</name>
+        <url>https://ufsc.br/</url>
+    </organization>
+
+    <scm>
+        <url>https://github.com/EnzoAlbornoz/investfunds-stocks</url>
+        <connection>git@github.com:EnzoAlbornoz/investfunds-stocks.git</connection>
+        <developerConnection>git@github.com:EnzoAlbornoz/investfunds-stocks.git</developerConnection>
+    </scm>
+
+    <issueManagement>
+        <system>Issues</system>
+        <url>https://github.com/EnzoAlbornoz/investfunds-stocks/issues</url>
+    </issueManagement>
+
+    <developers>
+        <developer>
+            <id>enzo.albornoz</id>
+            <email>enzocoelhoalbornoz@gmail.com</email>
+            <name>Enzo Coelho Albornoz</name>
+            <organization>Universidade Federal de Santa Catarina</organization>
+            <organizationUrl>https://ufsc.br/</organizationUrl>
+            <roles>
+                <role>undergraduate</role>
+                <role>student</role>
+            </roles>
+            <timezone>America/Sao_Paulo</timezone>
+        </developer>
+    </developers>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <main.class>br.ufsc.investfunds.companies.InvestFundsCompanies</main.class>
+        <java.version>11</java.version>
+        <junit.jupiter.version>5.4.2</junit.jupiter.version>
+        <maven.compiler.plugin.version>3.8.0</maven.compiler.plugin.version>
+        <maven.jar.plugin.version>3.1.1</maven.jar.plugin.version>
+        <maven.surefire.plugin.version>2.22.1</maven.surefire.plugin.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <version>${junit.jupiter.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.requery</groupId>
+            <artifactId>requery</artifactId>
+            <version>1.6.0</version>
+        </dependency>
+        <dependency>
+            <groupId>io.requery</groupId>
+            <artifactId>requery-processor</artifactId>
+            <version>1.6.0</version>
+        </dependency>
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>8.0.25</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-csv</artifactId>
+            <version>1.8</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${maven.compiler.plugin.version}</version>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                    <showWarnings>true</showWarnings>
+                    <showDeprecation>true</showDeprecation>
+                    <annotationProcessorPaths>
+                        <annotationProcessorPath>
+                            <groupId>io.requery</groupId>
+                            <artifactId>requery-processor</artifactId>
+                            <version>1.6.0</version>
+                        </annotationProcessorPath>
+                </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <executions>
+                <execution>
+                    <phase>package</phase>
+                    <goals>
+                        <goal>single</goal>
+                    </goals>
+                </execution>
+                </executions>
+                <configuration>
+                <descriptors>
+                    <descriptor>src/resources/assemblies/jar-with-dependencies-source.xml</descriptor>
+                </descriptors>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <executions>
+                    <execution>
+                    <id>attach-sources</id>
+                    <goals>
+                        <goal>jar</goal>
+                    </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>${maven.jar.plugin.version}</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addClasspath>true</addClasspath>
+                            <classpathPrefix>lib/</classpathPrefix>
+                            <mainClass>${main.class}</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${maven.surefire.plugin.version}</version>
+            </plugin>
+        </plugins>
+    </build>
+</project>
