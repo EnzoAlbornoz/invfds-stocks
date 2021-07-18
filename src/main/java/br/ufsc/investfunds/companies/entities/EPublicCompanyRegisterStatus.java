@@ -1,6 +1,4 @@
 package br.ufsc.investfunds.companies.entities;
-// Import Dependencies
-import io.requery.converter.EnumStringConverter;
 // Declare Enum
 public enum EPublicCompanyRegisterStatus {
     // Declare Values
@@ -11,10 +9,19 @@ public enum EPublicCompanyRegisterStatus {
     @Override
     public String toString() {
         switch(this) {
-        case CANCELED: return "CANCELADO";
+        case CANCELED: return "CANCELADA";
         case ACTIVE: return "ATIVO";
         case SUSPENDED: return "SUSPENSO(A) - DECISÃO ADM";
         default: throw new IllegalArgumentException();
+        }
+    }
+
+    public static EPublicCompanyRegisterStatus fromString(String string) {
+        switch(string) {
+            case "CANCELADA": return CANCELED;
+            case "ATIVO": return ACTIVE;
+            case "SUSPENSO(A) - DECISÃO ADM": return SUSPENDED;
+            default: throw new IllegalArgumentException(String.format("Cannot convert '%s' into EPublicCompanyRegisterStatus", string));
         }
     }
 }

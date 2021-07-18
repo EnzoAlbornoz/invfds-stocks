@@ -8,4 +8,3 @@ public class EPublicCompanyRegisterStatusConverter extends EnumStringConverter<E
         super(EPublicCompanyRegisterStatus.class);
     }
 }
-

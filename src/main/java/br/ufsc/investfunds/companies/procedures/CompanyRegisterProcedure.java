@@ -18,7 +18,9 @@ import io.requery.sql.EntityDataStore;
 public class CompanyRegisterProcedure {
     public static void doRun(EntityDataStore<Persistable> dataStore, Path filePath) throws IOException {
         // Read from File
-        var csvReader = CSVParser.parse(filePath, StandardCharsets.ISO_8859_1, CSVFormat.DEFAULT.withDelimiter(';'));
+        var csvReader = CSVParser.parse(filePath, StandardCharsets.ISO_8859_1,
+                CSVFormat.DEFAULT.withDelimiter(';').withFirstRecordAsHeader());
+        System.out.println("Executando!!!");
         // For each row, try to add it to table
         dataStore.runInTransaction(() -> {
             for (var record : csvReader.getRecords()) {
@@ -29,9 +31,8 @@ public class CompanyRegisterProcedure {
                 // Load Social Name
                 companyRegister.setSocialName(record.get(PublicCompanyRegister.SOCIAL_NAME.getName()));
                 // Load Status
-                companyRegister.setStatus((new EnumStringConverter<>(EPublicCompanyRegisterStatus.class)
-                        .convertToMapped(EPublicCompanyRegisterStatus.class,
-                                record.get(PublicCompanyRegister.STATUS.getName()))));
+                companyRegister.setStatus(
+                        EPublicCompanyRegisterStatus.fromString(record.get(PublicCompanyRegister.STATUS.getName())));
                 // Persist In DB
                 dataStore.upsert(companyRegister);
             }

@@ -6,6 +6,7 @@ module br.ufsc.investfunds.companies {
     requires requery.processor;
     requires mysql.connector.java;
     requires commons.csv;
+    requires transitive org.apache.commons.lang3;
     requires transitive java.sql;
     exports br.ufsc.investfunds.companies;
 }
