@@ -11,7 +11,6 @@ import org.apache.commons.csv.CSVParser;
 
 import br.ufsc.investfunds.companies.entities.EPublicCompanyRegisterStatus;
 import br.ufsc.investfunds.companies.entities.PublicCompanyRegister;
-import io.requery.converter.EnumStringConverter;
 import io.requery.Persistable;
 import io.requery.sql.EntityDataStore;
 
@@ -20,14 +19,14 @@ public class CompanyRegisterProcedure {
         // Read from File
         var csvReader = CSVParser.parse(filePath, StandardCharsets.ISO_8859_1,
                 CSVFormat.DEFAULT.withDelimiter(';').withFirstRecordAsHeader());
-        System.out.println("Executando!!!");
         // For each row, try to add it to table
         dataStore.runInTransaction(() -> {
             for (var record : csvReader.getRecords()) {
                 // Create Row
                 var companyRegister = new PublicCompanyRegister();
                 // Load CNPJ
-                companyRegister.setCnpj(record.get(PublicCompanyRegister.CNPJ.getName()));
+                var sanitizedCnpj = record.get(PublicCompanyRegister.CNPJ.getName()).replaceAll("\\D", "");
+                companyRegister.setCnpj(sanitizedCnpj);
                 // Load Social Name
                 companyRegister.setSocialName(record.get(PublicCompanyRegister.SOCIAL_NAME.getName()));
                 // Load Status

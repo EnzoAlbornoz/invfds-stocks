@@ -15,8 +15,6 @@ import com.mysql.cj.jdbc.MysqlDataSource;
 
 import org.apache.commons.lang3.function.FailableBiConsumer;
 
-import br.ufsc.investfunds.companies.entities.Models;
-
 // Import Entities
 // Define Module Functions
 public class InvestFundsCompanies {
