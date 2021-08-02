@@ -7,22 +7,21 @@ import io.requery.Key;
 import io.requery.Table;
 
 @Entity
-@Table()
+@Table(name = "tickers_cia_aberta")
 public class AbstractPublicCompanyTicker {
 
     @Key
-    @ForeignKey(references = PublicCompanyRegister.class)
+    @ForeignKey(references = AbstractPublicCompanyRegister.class, referencedColumn = "CNPJ_CIA")
     @Column(name = "CNPJ_CIA", length = 20, nullable = false)
-    String companyRegister;
+    AbstractPublicCompanyRegister companyRegister;
 
     @Key
-    @ForeignKey(references = PublicCompanyTicker.class, referencedColumn = "TICKER")
     @Column(name = "TICKER", nullable = false)
     String ticker;
 
     public AbstractPublicCompanyTicker() {}
 
-    public AbstractPublicCompanyTicker(String companyRegister, String ticker) {
+    public AbstractPublicCompanyTicker(AbstractPublicCompanyRegister companyRegister, String ticker) {
         this.companyRegister = companyRegister;
         this.ticker = ticker;
     }

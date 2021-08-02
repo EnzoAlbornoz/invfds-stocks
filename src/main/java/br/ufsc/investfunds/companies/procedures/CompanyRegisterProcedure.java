@@ -1,7 +1,5 @@
 package br.ufsc.investfunds.companies.procedures;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -25,7 +23,7 @@ public class CompanyRegisterProcedure {
                 // Create Row
                 var companyRegister = new PublicCompanyRegister();
                 // Load CNPJ
-                var sanitizedCnpj = record.get(PublicCompanyRegister.CNPJ.getName()).replaceAll("\\D", "");
+                var sanitizedCnpj = record.get("CNPJ_CIA").replaceAll("\\D", "");
                 companyRegister.setCnpj(sanitizedCnpj);
                 // Load Social Name
                 companyRegister.setSocialName(record.get(PublicCompanyRegister.SOCIAL_NAME.getName()));

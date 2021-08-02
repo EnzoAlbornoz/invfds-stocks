@@ -14,9 +14,9 @@ import io.requery.Table;
 public class AbstractPublicCompanyStockSerie {
 
     @Key
-    @ForeignKey(references = PublicCompanyTicker.class, referencedColumn = "TICKER")
+    @ForeignKey(references = AbstractPublicCompanyTicker.class, referencedColumn = "TICKER")
     @Column(name = "TICKER", nullable = false)
-    String ticker;
+    AbstractPublicCompanyTicker ticker;
 
     @Key
     @Column(name = "DT_PREGAO", nullable = false)

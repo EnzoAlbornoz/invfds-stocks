@@ -6,7 +6,6 @@ import javax.sql.DataSource;
 import io.requery.Persistable;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
-import java.util.function.BiConsumer;
 
 import io.requery.sql.SchemaModifier;
 import io.requery.sql.EntityDataStore;

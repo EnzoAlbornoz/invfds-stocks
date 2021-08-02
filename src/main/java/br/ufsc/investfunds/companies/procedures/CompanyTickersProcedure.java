@@ -19,14 +19,11 @@ import com.jayway.jsonpath.JsonPath;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 
+import br.ufsc.investfunds.companies.entities.PublicCompanyRegister;
 import br.ufsc.investfunds.companies.entities.PublicCompanyTicker;
 import io.requery.Persistable;
 import io.requery.sql.EntityDataStore;
 import net.lingala.zip4j.ZipFile;
-import net.lingala.zip4j.headers.FileHeaderFactory;
-import net.lingala.zip4j.io.inputstream.ZipInputStream;
-import net.lingala.zip4j.model.FileHeader;
-import net.lingala.zip4j.model.LocalFileHeader;
 
 public class CompanyTickersProcedure {
 
@@ -34,7 +31,7 @@ public class CompanyTickersProcedure {
         ISS_CODE, ISS_NAME, ISS_CNPJ, ISS_CREATION_DATE
     }
 
-    public static void doDownload(Path cvmFolder) throws URISyntaxException, IOException, InterruptedException {
+    public static void doDownload(EntityDataStore<Persistable> dataStore, Path cvmFolder) throws URISyntaxException, IOException, InterruptedException {
         // Download File into Memory
         var downloadOptionsURI = new URI("https://sistemaswebb3-listados.b3.com.br/isinProxy/IsinCall/GetTextDownload");
         var http = HttpClient.newHttpClient();
@@ -53,7 +50,7 @@ public class CompanyTickersProcedure {
         try(var zipFile = new ZipFile(fileZipDownloadPath)) {
             var zipIssuerStream = zipFile.getInputStream(zipFile.getFileHeader("EMISSOR.TXT"));
             // Create Folder and File
-            var issuersFile = cvmFolder.resolve("./STOCK/issuers.csv").toFile();
+            var issuersFile = cvmFolder.resolve("./STOCK/ISSUERS/issuers.csv").toFile();
             issuersFile.mkdirs();
             // Extract File Content to Path
             try(var issuersFileOutputStream = new FileOutputStream(issuersFile)) {
@@ -71,9 +68,11 @@ public class CompanyTickersProcedure {
             // Fetch Data from Record
             var issuerCnpj = csvRow.get(IssuersHeaders.ISS_CODE);
             var issuerCode = csvRow.get(IssuersHeaders.ISS_CODE);
+            // Fetch Entities
+            var issuer = dataStore.findByKey(PublicCompanyRegister.class, issuerCnpj);
             // Create Entities
-            var ordinaryTicker = new PublicCompanyTicker(issuerCnpj, issuerCode.concat("3"));
-            var preferentialTicker = new PublicCompanyTicker(issuerCnpj, issuerCode.concat("4"));
+            var ordinaryTicker = new PublicCompanyTicker(issuer, issuerCode.concat("3"));
+            var preferentialTicker = new PublicCompanyTicker(issuer, issuerCode.concat("4"));
             // Return Entities
             return Stream.of(ordinaryTicker, preferentialTicker);
         }).collect(Collectors.toList());
