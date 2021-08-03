@@ -1,6 +1,7 @@
 package br.ufsc.investfunds.companies.procedures;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URI;
@@ -11,7 +12,9 @@ import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.Connection;
 import java.sql.Date;
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -20,11 +23,6 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import br.ufsc.investfunds.companies.entities.PublicCompanyStockSerie;
-import br.ufsc.investfunds.companies.entities.PublicCompanyTicker;
-import io.requery.Persistable;
-import io.requery.sql.EntityDataStore;
 import net.lingala.zip4j.ZipFile;
 
 public class CompanyStocksProcedure {
@@ -36,13 +34,14 @@ public class CompanyStocksProcedure {
                 .sorted(Map.Entry.comparingByKey()).map(Map.Entry::getValue);
     }
 
-    public static void doDownload(EntityDataStore<Persistable> dataStore, Path cvmPath) throws URISyntaxException {
-        // Get Last Stock Price Date
-        var lastStockPriceDates = dataStore.select(PublicCompanyStockSerie.TRADE_DATE)
-                .orderBy(PublicCompanyStockSerie.TRADE_DATE.desc()).limit(1).get().toList();
-        var lastStockPriceDate = lastStockPriceDates.size() > 0
-                ? lastStockPriceDates.get(0).get(PublicCompanyStockSerie.TRADE_DATE).toLocalDate()
-                : Date.valueOf("2015-01-01").toLocalDate();
+    public static void doDownload(Connection conn, Path cvmPath)
+            throws URISyntaxException, UnsupportedEncodingException, IOException, SQLException {
+        // Get Last Stock Price Date from Database
+        var query = new String(CompanyStocksProcedure.class.getResourceAsStream("/sql/getLastSyncedStockDate.sql").readAllBytes(),
+                "UTF-8");
+        var queryResult = conn.createStatement().executeQuery(query);
+        queryResult.next();
+        var lastStockPriceDate = queryResult.getDate("LAST_SYNCED_DATE").toLocalDate();
         System.out.println(String.format("[CompanyStocksProcedure] [doDownload] Syncronizing from %s",
                 lastStockPriceDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))));
         var today = LocalDate.now().withDayOfMonth(2);
@@ -63,7 +62,8 @@ public class CompanyStocksProcedure {
         // Create HTTP Handler
         var http = HttpClient.newHttpClient();
         // Download Files (In Parallel)
-        System.out.println(String.format("[CompanyStocksProcedure] [doDownload] Downloading %d historical months ...", downloadURIStream.size()));
+        System.out.println(String.format("[CompanyStocksProcedure] [doDownload] Downloading %d historical months ...",
+                downloadURIStream.size()));
         chunked(downloadURIStream.stream(), 8).forEach((downloadUris) -> {
             downloadUris.stream().parallel().forEach(downloadUri -> {
                 try {
@@ -86,52 +86,61 @@ public class CompanyStocksProcedure {
         System.out.println("[CompanyStocksProcedure] [doDownload] Download/Extraction Complete");
     }
 
-    public static void doRun(EntityDataStore<Persistable> dataStore, Path filePath) throws IOException {
-        // Convert File Content to Stock Entries
-        try (var stockFileLines = Files.lines(filePath, Charset.forName("ISO-8859-1"))) {
-            // Build Entities
-            chunked(stockFileLines,  100).forEach((stockLines) -> {
-                var stockFileEntities = stockLines.stream()
-                        // Process In Parallel
-                        .parallel()
-                        // Map Entries
-                        .map((stockLine) -> {
-                            // You can learn more about the format at
-                            // http://www.b3.com.br/pt_br/market-data-e-indices/servicos-de-dados/market-data/historico/mercado-a-vista/cotacoes-historicas/
+    // public static void doRun(EntityDataStore<Persistable> dataStore, Path
+    // filePath) throws IOException {
+    // // Convert File Content to Stock Entries
+    // try (var stockFileLines = Files.lines(filePath,
+    // Charset.forName("ISO-8859-1"))) {
+    // // Build Entities
+    // chunked(stockFileLines, 100).forEach((stockLines) -> {
+    // var stockFileEntities = stockLines.stream()
+    // // Process In Parallel
+    // .parallel()
+    // // Map Entries
+    // .map((stockLine) -> {
+    // // You can learn more about the format at
+    // //
+    // http://www.b3.com.br/pt_br/market-data-e-indices/servicos-de-dados/market-data/historico/mercado-a-vista/cotacoes-historicas/
 
-                            // Skip if not a valid Stock Registry
-                            if (!stockLine.startsWith("01") || !stockLine.substring(11, 13).equals("02")) {
-                                return null;
-                            }
-                            // Parse Line
-                            var ticker = stockLine.substring(13, 25).strip();
-                            var tradeDate = String.format("%s-%s-%s", stockLine.substring(3, 7),
-                                    stockLine.substring(7, 9), stockLine.substring(9, 11));
-                            var coin = stockLine.substring(53, 57);
-                            var openingPrice = new BigDecimal(new BigInteger(stockLine.substring(57, 70), 2));
-                            var maximumPrice = new BigDecimal(new BigInteger(stockLine.substring(70, 83), 2));
-                            var minimumPrice = new BigDecimal(new BigInteger(stockLine.substring(83, 96), 2));
-                            var averagePrice = new BigDecimal(new BigInteger(stockLine.substring(96, 109), 2));
-                            var closingPrice = new BigDecimal(new BigInteger(stockLine.substring(109, 121), 2));
-                            // Create Entity
-                            var tickerEntity = dataStore.findByKey(PublicCompanyTicker.class, ticker);
-                            var stockEntry = new PublicCompanyStockSerie();
-                            // Update Info
-                            stockEntry.setTicker(tickerEntity);
-                            stockEntry.setTradeDate(Date.valueOf(tradeDate));
-                            stockEntry.setCoin(coin);
-                            stockEntry.setOpeningPrice(openingPrice);
-                            stockEntry.setMaximumPrice(maximumPrice);
-                            stockEntry.setMinimumPrice(minimumPrice);
-                            stockEntry.setAveragePrice(averagePrice);
-                            stockEntry.setClosingPrice(closingPrice);
-                            // Return the Populated Entity
-                            return stockEntry;
-                        }).collect(Collectors.filtering(entry -> entry != null, Collectors.toList()));
-                // Insert Entities in Database
-                dataStore.upsert(stockFileEntities);
-            });
-        }
-    }
+    // // Skip if not a valid Stock Registry
+    // if (!stockLine.startsWith("01") || !stockLine.substring(11, 13).equals("02"))
+    // {
+    // return null;
+    // }
+    // // Parse Line
+    // var ticker = stockLine.substring(13, 25).strip();
+    // var tradeDate = String.format("%s-%s-%s", stockLine.substring(3, 7),
+    // stockLine.substring(7, 9), stockLine.substring(9, 11));
+    // var coin = stockLine.substring(53, 57);
+    // var openingPrice = new BigDecimal(new BigInteger(stockLine.substring(57, 70),
+    // 2));
+    // var maximumPrice = new BigDecimal(new BigInteger(stockLine.substring(70, 83),
+    // 2));
+    // var minimumPrice = new BigDecimal(new BigInteger(stockLine.substring(83, 96),
+    // 2));
+    // var averagePrice = new BigDecimal(new BigInteger(stockLine.substring(96,
+    // 109), 2));
+    // var closingPrice = new BigDecimal(new BigInteger(stockLine.substring(109,
+    // 121), 2));
+    // // Create Entity
+    // var stockEntry = new PublicCompanyStockSerie();
+    // // Update Info
+    // stockEntry.setTicker(ticker);
+    // stockEntry.setTradeDate(Date.valueOf(tradeDate));
+    // stockEntry.setCoin(coin);
+    // stockEntry.setOpeningPrice(openingPrice);
+    // stockEntry.setMaximumPrice(maximumPrice);
+    // stockEntry.setMinimumPrice(minimumPrice);
+    // stockEntry.setAveragePrice(averagePrice);
+    // stockEntry.setClosingPrice(closingPrice);
+    // // Return the Populated Entity
+    // return stockEntry;
+    // }).collect(Collectors.filtering(entry -> entry != null,
+    // Collectors.toList()));
+    // // Insert Entities in Database
+    // dataStore.upsert(stockFileEntities);
+    // });
+    // }
+    // }
 
 }

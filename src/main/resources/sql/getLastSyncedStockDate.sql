@@ -1,0 +1,11 @@
+SELECT
+	IFNULL(
+		(
+			SELECT DT_PREGAO
+				FROM serie_hist_cias_abertas SH
+			ORDER BY SH.DT_PREGAO DESC
+			LIMIT 1
+		),
+		DATE('2015-01-01')
+	)
+AS LAST_SYNCED_DATE

@@ -1,61 +1,47 @@
 package br.ufsc.investfunds.companies;
 
-// Import Dependencies
-import java.net.URI;
-import javax.sql.DataSource;
-import io.requery.Persistable;
-import java.net.URISyntaxException;
+import java.io.IOException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.file.Path;
-
-import io.requery.sql.SchemaModifier;
-import io.requery.sql.EntityDataStore;
-import io.requery.sql.TableCreationMode;
-import com.mysql.cj.jdbc.MysqlDataSource;
+// Import Dependencies
+import java.sql.Connection;
+import java.sql.SQLException;
 
 import org.apache.commons.lang3.function.FailableBiConsumer;
-
 // Import Entities
 // Define Module Functions
 public class InvestFundsCompanies {
     // Define Private Store Data Store
-    private static EntityDataStore<Persistable> dataStore;
-    private static DataSource dataSource;
-
+    static Connection mainConnection;
     // Declare Main Static Functions
-    public static void connectDatabase(String dbUrl, String dbName, String dbUser, String dbPassword)
-            throws URISyntaxException {
-        // Define Info for Connection
-        var url = new URI(dbUrl.replace("jdbc:", ""));
-        var mysqlDataSource = new MysqlDataSource();
-        mysqlDataSource.setServerName(url.getHost());
-        mysqlDataSource.setPort(url.getPort() != -1 ? url.getPort() : 3306);
-        mysqlDataSource.setDatabaseName(dbName);
-        mysqlDataSource.setUser(dbUser);
-        mysqlDataSource.setPassword(dbPassword);
-        // Instantiate Data Store
-        dataStore = new EntityDataStore<>(mysqlDataSource, Models.DEFAULT);
-        // Store Data Source
-        dataSource = mysqlDataSource;
-    }
-
-    public static void createEntitiesTables() {
-        // Create Schema Modifier
-        var schemaModifier = new SchemaModifier(dataSource, Models.DEFAULT);
+    public static void createEntitiesTables(Connection connection) throws SQLException, IOException {
+        // Save Connection
+        mainConnection = connection;
+        // Load File
+        var createTablesText = new String(InvestFundsCompanies.class.getResourceAsStream("/sql/createTables.sql").readAllBytes(), "UTF-8");
+        // var createTablesStatements
+        var statementTexts = createTablesText.split(";\n");
         // Create Tables
-        schemaModifier.createTables(TableCreationMode.CREATE_NOT_EXISTS);
+        var createTablesStatement = connection.createStatement();
+        for (var statementText: statementTexts) {
+            createTablesStatement.addBatch(statementText);
+        }
+        createTablesStatement.executeBatch();
+        createTablesStatement.close();
     }
 
-    public static void runProcedure(FailableBiConsumer<EntityDataStore<Persistable>, Path, Exception> procedure,
+    public static void runProcedure(FailableBiConsumer<Connection, Path, Exception> procedure,
+            Connection connection,
             Path filePath) throws Exception {
         // Execute Procedure
-        procedure.accept(dataStore, filePath);
+        procedure.accept(connection, filePath);
     }
 
-    public static void close() {
-        // Close Data Store
-        dataStore.close();
-        // Clear References
-        dataStore = null;
-        dataSource = null;
-    }
+    // public static void main(String[] args) throws IOException {
+    //     var file = InvestFundsCompanies.class.getResource("/sql/createTables.sql");
+    //     System.out.println(file);
+    //     // var str = String.valueOf(file.readAllBytes());
+    //     // System.out.println(str);
+    // }
 }

@@ -10,6 +10,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.sql.Connection;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.stream.Collectors;
@@ -19,12 +20,6 @@ import com.jayway.jsonpath.JsonPath;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
-
-import br.ufsc.investfunds.companies.entities.PublicCompanyRegister;
-import br.ufsc.investfunds.companies.entities.PublicCompanyStockSerie;
-import br.ufsc.investfunds.companies.entities.PublicCompanyTicker;
-import io.requery.Persistable;
-import io.requery.sql.EntityDataStore;
 import net.lingala.zip4j.ZipFile;
 
 public class CompanyTickersProcedure {
@@ -33,7 +28,7 @@ public class CompanyTickersProcedure {
         ISS_CODE, ISS_NAME, ISS_CNPJ, ISS_CREATION_DATE
     }
 
-    public static void doDownload(EntityDataStore<Persistable> dataStore, Path cvmFolder) throws URISyntaxException, IOException, InterruptedException {
+    public static void doDownload(Connection conn, Path cvmFolder) throws URISyntaxException, IOException, InterruptedException {
         var http = HttpClient.newHttpClient();
         // Download File into Memory
         var downloadOptionsURI = new URI("https://sistemaswebb3-listados.b3.com.br/isinProxy/IsinCall/GetTextDownload");
@@ -61,28 +56,26 @@ public class CompanyTickersProcedure {
         }
     }
 
-    public static void doRun(EntityDataStore<Persistable> dataStore, Path filePath) throws IOException {
-        // Read Files
-        var csvReader = CSVParser.parse(filePath, StandardCharsets.UTF_8,
-                CSVFormat.DEFAULT.withHeader(IssuersHeaders.class));
-        // Register Records
-        var tickerEntities = csvReader.getRecords().stream().parallel().flatMap(csvRow -> {
-            // Fetch Data from Record
-            var issuerCnpj = csvRow.get(IssuersHeaders.ISS_CODE);
-            var issuerCode = csvRow.get(IssuersHeaders.ISS_CODE);
-            // Fetch Entities
-            var issuer = dataStore.findByKey(PublicCompanyRegister.class, issuerCnpj);
-            // Create Entities
-            PublicCompanyTicker ordinaryTicker = new PublicCompanyTicker();
-            ordinaryTicker.setCompanyRegister(issuer);
-            ordinaryTicker.setTicker(issuerCode.concat("3"));
-            PublicCompanyTicker preferentialTicker =  new PublicCompanyTicker();
-            preferentialTicker.setCompanyRegister(issuer);
-            preferentialTicker.setTicker(issuerCode.concat("4"));
-            // Return Entities
-            return Stream.of(ordinaryTicker, preferentialTicker);
-        }).collect(Collectors.filtering((ticker) -> ticker != null, Collectors.toList()));
-        // Upsert Tickers
-        dataStore.upsert(tickerEntities);
-    }
+    // public static void doRun(EntityDataStore<Persistable> dataStore, Path filePath) throws IOException {
+    //     // Read Files
+    //     var csvReader = CSVParser.parse(filePath, StandardCharsets.UTF_8,
+    //             CSVFormat.DEFAULT.withHeader(IssuersHeaders.class));
+    //     // Register Records
+    //     var tickerEntities = csvReader.getRecords().stream().parallel().flatMap(csvRow -> {
+    //         // Fetch Data from Record
+    //         var issuerCnpj = csvRow.get(IssuersHeaders.ISS_CODE);
+    //         var issuerCode = csvRow.get(IssuersHeaders.ISS_CODE);
+    //         // Fetch Entities
+    //         PublicCompanyTicker ordinaryTicker = new PublicCompanyTicker();
+    //         ordinaryTicker.setCompanyRegister(issuerCnpj);
+    //         ordinaryTicker.setTicker(issuerCode.concat("3"));
+    //         PublicCompanyTicker preferentialTicker =  new PublicCompanyTicker();
+    //         preferentialTicker.setCompanyRegister(issuerCnpj);
+    //         preferentialTicker.setTicker(issuerCode.concat("4"));
+    //         // Return Entities
+    //         return Stream.of(ordinaryTicker, preferentialTicker);
+    //     }).collect(Collectors.filtering((ticker) -> ticker != null, Collectors.toList()));
+    //     // Upsert Tickers
+    //     dataStore.upsert(tickerEntities);
+    // }
 }
