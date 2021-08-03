@@ -9,10 +9,10 @@ public enum EPublicCompanyRegisterStatus {
     @Override
     public String toString() {
         switch(this) {
-        case CANCELED: return "CANCELADA";
-        case ACTIVE: return "ATIVO";
-        case SUSPENDED: return "SUSPENSO(A) - DECISÃO ADM";
-        default: throw new IllegalArgumentException();
+            case CANCELED: return "CANCELADA";
+            case ACTIVE: return "ATIVO";
+            case SUSPENDED: return "SUSPENSO(A) - DECISÃO ADM";
+            default: throw new IllegalArgumentException();
         }
     }
 

@@ -39,7 +39,9 @@ public class CompanyTrimestralResultsDemonstrativeProcedure {
             // Fetch Entity
             var companyEntity = dataStore.findByKey(PublicCompanyRegister.class, sanitizedCnpj);
             // Create Entities
-            var entity = new PublicCompanyTrimestralResultsDemonstrative(companyEntity, referenceDate);
+            var entity = new PublicCompanyTrimestralResultsDemonstrative();
+            entity.setCompanyRegister(companyEntity);
+            entity.setReferenceDate(referenceDate);
             entity.setCoin(coin);
             entity.setScale(scale);
             entity.setAccountCode(accountCode);

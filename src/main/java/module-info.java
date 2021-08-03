@@ -9,6 +9,7 @@ module br.ufsc.investfunds.companies {
     requires commons.csv;
     requires json.path;
     requires zip4j;
+    requires javax.persistence;
     requires transitive org.apache.commons.lang3;
     requires transitive java.sql;
     exports br.ufsc.investfunds.companies;

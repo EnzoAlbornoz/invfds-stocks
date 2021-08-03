@@ -7,7 +7,7 @@ import io.requery.Entity;
 import io.requery.Key;
 import io.requery.Table;
 // Declare Entity
-@Entity
+@Entity()
 @Table(name = "cadastro_cias_abertas")
 public abstract class AbstractPublicCompanyRegister {
     // Declare Attributes

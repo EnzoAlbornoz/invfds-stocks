@@ -10,14 +10,14 @@ import io.requery.Index;
 import io.requery.Key;
 import io.requery.Table;
 
-@Entity
+@Entity()
 @Table(name = "itr_dre_cia_aberta")
 public class AbstractPublicCompanyTrimestralResultsDemonstrative {
 
     @Key
-    @ForeignKey(references = AbstractPublicCompanyRegister.class, referencedColumn = "CNPJ_CIA")
+    @ForeignKey(referencedColumn = "CNPJ_CIA")
     @Column(name = "CNPJ_CIA", length = 20, nullable = false)
-    AbstractPublicCompanyRegister companyRegister;
+    PublicCompanyRegister companyRegister;
 
     @Key
     @Column(name = "DT_REFERENCIA", nullable = false)
@@ -38,11 +38,6 @@ public class AbstractPublicCompanyTrimestralResultsDemonstrative {
 
     @Column(name = "VAL_CONTA", nullable = false)
     BigDecimal accountValue;
-
-    public AbstractPublicCompanyTrimestralResultsDemonstrative(AbstractPublicCompanyRegister companyRegister, Date referenceDate) {
-        this.companyRegister = companyRegister;
-        this.referenceDate = referenceDate;
-    }
 
     public AbstractPublicCompanyTrimestralResultsDemonstrative() {}
 

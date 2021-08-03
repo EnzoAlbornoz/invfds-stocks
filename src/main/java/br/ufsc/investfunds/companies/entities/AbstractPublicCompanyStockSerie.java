@@ -9,14 +9,14 @@ import io.requery.ForeignKey;
 import io.requery.Key;
 import io.requery.Table;
 
-@Entity
+@Entity()
 @Table(name = "serie_hist_cias_aberta")
 public class AbstractPublicCompanyStockSerie {
 
     @Key
-    @ForeignKey(references = AbstractPublicCompanyTicker.class, referencedColumn = "TICKER")
     @Column(name = "TICKER", nullable = false)
-    AbstractPublicCompanyTicker ticker;
+    @ForeignKey(references = PublicCompanyTicker.class, referencedColumn = "TICKER")
+    PublicCompanyTicker ticker;
 
     @Key
     @Column(name = "DT_PREGAO", nullable = false)
