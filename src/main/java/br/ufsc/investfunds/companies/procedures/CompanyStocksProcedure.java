@@ -21,11 +21,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import net.lingala.zip4j.ZipFile;
 
 public class CompanyStocksProcedure {
+
+    private final static Logger LOGGER = Logger.getLogger("CompanyStocksProcedure");
 
     public static <T> Stream<List<T>> chunked(Stream<T> stream, int chunkSize) {
         AtomicInteger index = new AtomicInteger(0);
@@ -37,7 +40,8 @@ public class CompanyStocksProcedure {
     public static void doDownload(Connection conn, Path cvmPath)
             throws URISyntaxException, UnsupportedEncodingException, IOException, SQLException {
         // Get Last Stock Price Date from Database
-        var query = new String(CompanyStocksProcedure.class.getResourceAsStream("/sql/getLastSyncedStockDate.sql").readAllBytes(),
+        var query = new String(
+                CompanyStocksProcedure.class.getResourceAsStream("/sql/getLastSyncedStockDate.sql").readAllBytes(),
                 "UTF-8");
         var queryResult = conn.createStatement().executeQuery(query);
         queryResult.next();
@@ -64,83 +68,89 @@ public class CompanyStocksProcedure {
         // Download Files (In Parallel)
         System.out.println(String.format("[CompanyStocksProcedure] [doDownload] Downloading %d historical months ...",
                 downloadURIStream.size()));
-        chunked(downloadURIStream.stream(), 8).forEach((downloadUris) -> {
-            downloadUris.stream().parallel().forEach(downloadUri -> {
-                try {
-                    // Create Temp File for Zip
-                    var tempZipFile = Files.createTempFile("stocks-", ".zip").toFile();
-                    // Download Zip
-                    var zipDownloadRes = http.send(HttpRequest.newBuilder(downloadUri).build(),
-                            BodyHandlers.ofFile(tempZipFile.toPath()));
-                    System.out.println(String.format("[CompanyStocksProcedure] [doDownload] Extracting %s",
-                            tempZipFile.getName()));
-                    // Return Downloaded Temp File
-                    var zip = new ZipFile(zipDownloadRes.body().toFile());
-                    zip.extractAll(extractionFolder.toString());
-                    zip.close();
-                } catch (IOException | InterruptedException e) {
-                    // End Processing
-                }
-            });
+        downloadURIStream.stream().parallel().forEach(downloadUri -> {
+            try {
+                // Create Temp File for Zip
+                var tempZipFile = Files.createTempFile("stocks-", ".zip").toFile();
+                // Download Zip
+                var zipDownloadRes = http.send(HttpRequest.newBuilder(downloadUri).build(),
+                        BodyHandlers.ofFile(tempZipFile.toPath()));
+                System.out.println(
+                        String.format("[CompanyStocksProcedure] [doDownload] Extracting %s", tempZipFile.getName()));
+                // Return Downloaded Temp File
+                var zip = new ZipFile(zipDownloadRes.body().toFile());
+                zip.extractAll(extractionFolder.toString());
+                zip.close();
+            } catch (IOException | InterruptedException e) {
+                // End Processing
+            }
         });
         System.out.println("[CompanyStocksProcedure] [doDownload] Download/Extraction Complete");
     }
 
-    // public static void doRun(EntityDataStore<Persistable> dataStore, Path
-    // filePath) throws IOException {
-    // // Convert File Content to Stock Entries
-    // try (var stockFileLines = Files.lines(filePath,
-    // Charset.forName("ISO-8859-1"))) {
-    // // Build Entities
-    // chunked(stockFileLines, 100).forEach((stockLines) -> {
-    // var stockFileEntities = stockLines.stream()
-    // // Process In Parallel
-    // .parallel()
-    // // Map Entries
-    // .map((stockLine) -> {
-    // // You can learn more about the format at
-    // //
-    // http://www.b3.com.br/pt_br/market-data-e-indices/servicos-de-dados/market-data/historico/mercado-a-vista/cotacoes-historicas/
-
-    // // Skip if not a valid Stock Registry
-    // if (!stockLine.startsWith("01") || !stockLine.substring(11, 13).equals("02"))
-    // {
-    // return null;
-    // }
-    // // Parse Line
-    // var ticker = stockLine.substring(13, 25).strip();
-    // var tradeDate = String.format("%s-%s-%s", stockLine.substring(3, 7),
-    // stockLine.substring(7, 9), stockLine.substring(9, 11));
-    // var coin = stockLine.substring(53, 57);
-    // var openingPrice = new BigDecimal(new BigInteger(stockLine.substring(57, 70),
-    // 2));
-    // var maximumPrice = new BigDecimal(new BigInteger(stockLine.substring(70, 83),
-    // 2));
-    // var minimumPrice = new BigDecimal(new BigInteger(stockLine.substring(83, 96),
-    // 2));
-    // var averagePrice = new BigDecimal(new BigInteger(stockLine.substring(96,
-    // 109), 2));
-    // var closingPrice = new BigDecimal(new BigInteger(stockLine.substring(109,
-    // 121), 2));
-    // // Create Entity
-    // var stockEntry = new PublicCompanyStockSerie();
-    // // Update Info
-    // stockEntry.setTicker(ticker);
-    // stockEntry.setTradeDate(Date.valueOf(tradeDate));
-    // stockEntry.setCoin(coin);
-    // stockEntry.setOpeningPrice(openingPrice);
-    // stockEntry.setMaximumPrice(maximumPrice);
-    // stockEntry.setMinimumPrice(minimumPrice);
-    // stockEntry.setAveragePrice(averagePrice);
-    // stockEntry.setClosingPrice(closingPrice);
-    // // Return the Populated Entity
-    // return stockEntry;
-    // }).collect(Collectors.filtering(entry -> entry != null,
-    // Collectors.toList()));
-    // // Insert Entities in Database
-    // dataStore.upsert(stockFileEntities);
-    // });
-    // }
-    // }
-
+    public static void doRun(Connection conn, Path filePath) throws IOException, SQLException {
+        LOGGER.info(String.format("[doRun] Processing file %s", filePath.toString()));
+        // Load Query
+        var query = new String(
+                CompanyStocksProcedure.class.getResourceAsStream("/sql/insertStockPriceHistoric.sql").readAllBytes(),
+                "ISO-8859-1");
+        // Convert File Content to Stock Entries
+        try (var stockFileLines = Files.lines(filePath, Charset.forName("ISO-8859-1"))) {
+            // Create Transaction
+            conn.setAutoCommit(false);
+            try {
+                // Prepare Statement
+                var stmt = conn.prepareStatement(query);
+                // Build Entities
+                stockFileLines.parallel().filter(stockLine -> stockLine.startsWith("01")
+                        && stockLine.substring(10, 12).equals("02") && stockLine.subSequence(24, 27).equals("010"))
+                        .sequential().forEach((stockLine) -> {
+                            /*
+                             * You can learn more about the format at
+                             * http://www.b3.com.br/pt_br/market-data-e-indices/servicos-de-dados/market-
+                             * data/historico/mercado-a-vista/cotacoes-historicas/
+                             */
+                            try {
+                                // Clear Statement Parameters
+                                stmt.clearParameters();
+                                // Parse Line
+                                var ticker = stockLine.substring(12, 24).strip();
+                                var tradeDate = String.format("%s-%s-%s", stockLine.substring(2, 6),
+                                        stockLine.substring(6, 8), stockLine.substring(8, 10));
+                                var coin = stockLine.substring(52, 56);
+                                var openingPrice = new BigDecimal(new BigInteger(stockLine.substring(56, 69)), 2);
+                                var maximumPrice = new BigDecimal(new BigInteger(stockLine.substring(69, 82)), 2);
+                                var minimumPrice = new BigDecimal(new BigInteger(stockLine.substring(82, 95)), 2);
+                                var averagePrice = new BigDecimal(new BigInteger(stockLine.substring(95, 108)), 2);
+                                var closingPrice = new BigDecimal(new BigInteger(stockLine.substring(108, 120)), 2);
+                                // Define Parameters
+                                stmt.setString(1, ticker);
+                                stmt.setDate(2, Date.valueOf(tradeDate));
+                                stmt.setString(3, coin);
+                                stmt.setBigDecimal(4, openingPrice);
+                                stmt.setBigDecimal(5, maximumPrice);
+                                stmt.setBigDecimal(6, minimumPrice);
+                                stmt.setBigDecimal(7, averagePrice);
+                                stmt.setBigDecimal(8, closingPrice);
+                                // Add to Batch
+                                stmt.addBatch();
+                            } catch (SQLException e) {
+                                e.printStackTrace();
+                            }
+                        });
+                // Execute Batch
+                stmt.executeBatch();
+                // var resultStream = IntStream.of();
+                // var touchedRows = resultStream.filter(i -> i >= 0).sum();
+                // Commit Results
+                conn.commit();
+                // Return Touched Rows
+                // System.out.printf("[CompanyStocksProcedure] [doRun] Modified rows: %d%n",
+                // touchedRows);
+            } catch (SQLException e) {
+                e.printStackTrace();
+                conn.rollback();
+            }
+        }
+    }
 }

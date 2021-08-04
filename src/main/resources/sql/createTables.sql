@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS `cadastro_cias_abertas` (
 	PRIMARY KEY (`CNPJ_CIA`)
 );
 
-CREATE TABLE IF NOT EXISTS `tickers_cia_aberta` (
+CREATE TABLE IF NOT EXISTS `tickers_cias_abertas` (
 	`TICKER` VARCHAR(12) NOT NULL,
 	`CNPJ_CIA` VARCHAR(20) NOT NULL,
 	PRIMARY KEY (`TICKER`),
@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS `serie_hist_cias_abertas` (
 	`PRE_MED` DECIMAL(11,2) NOT NULL,
 	`PRE_FCH` DECIMAL(11,2) NOT NULL,
 	PRIMARY KEY (`TICKER`,`DT_PREGAO`),
-	FOREIGN KEY (`TICKER`) REFERENCES `tickers_cia_aberta`(`TICKER`)
+	FOREIGN KEY (`TICKER`) REFERENCES `tickers_cias_abertas`(`TICKER`)
 );
 
 CREATE TABLE IF NOT EXISTS `dre_cias_abertas` (
