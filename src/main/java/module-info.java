@@ -7,6 +7,7 @@ module br.ufsc.investfunds.companies {
     requires org.json;
     requires zip4j;
     requires transitive org.apache.commons.lang3;
+    requires org.apache.commons.collections4;
     requires transitive java.sql;
     exports br.ufsc.investfunds.companies;
 }

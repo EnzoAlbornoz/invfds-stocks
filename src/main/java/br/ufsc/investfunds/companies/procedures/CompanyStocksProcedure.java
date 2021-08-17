@@ -122,7 +122,7 @@ public class CompanyStocksProcedure {
                                 var maximumPrice = new BigDecimal(new BigInteger(stockLine.substring(69, 82)), 2);
                                 var minimumPrice = new BigDecimal(new BigInteger(stockLine.substring(82, 95)), 2);
                                 var averagePrice = new BigDecimal(new BigInteger(stockLine.substring(95, 108)), 2);
-                                var closingPrice = new BigDecimal(new BigInteger(stockLine.substring(108, 120)), 2);
+                                var closingPrice = new BigDecimal(new BigInteger(stockLine.substring(108, 121)), 2);
                                 // Define Parameters
                                 stmt.setString(1, ticker);
                                 stmt.setDate(2, Date.valueOf(tradeDate));
