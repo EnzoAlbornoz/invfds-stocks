@@ -15,14 +15,15 @@ import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.QuoteMode;
 import org.apache.commons.collections4.ListUtils;
 
-public class CompanyPassiveBalanceSheetStatementProcedure {
+public class CompanyCashFlowStatementProcedure {
 
-    private final static Logger LOGGER = Logger.getLogger("CompanyPassiveBalanceSheetStatementProcedure");
+    private final static Logger LOGGER = Logger.getLogger("CompanyCashFlowStatementProcedure");
 
     public static void doRun(Connection conn, Path filePath) throws IOException, SQLException {
         // Load Query
-        var query = new String(CompanyPassiveBalanceSheetStatementProcedure.class
-                .getResourceAsStream("/sql/insertBPP.sql").readAllBytes(), "UTF-8");
+        var query = new String(
+                CompanyCashFlowStatementProcedure.class.getResourceAsStream("/sql/insertDFC.sql").readAllBytes(),
+                "UTF-8");
         // Read from File
         var csvReader = CSVParser.parse(filePath, StandardCharsets.ISO_8859_1,
                 CSVFormat.MYSQL.withDelimiter(';').withFirstRecordAsHeader());
@@ -42,12 +43,13 @@ public class CompanyPassiveBalanceSheetStatementProcedure {
                 for (var csvRow : chunk) {
                     // Check Row is Valid
                     // System.out.println();
-                    if (!csvRow.get("ORDEM_EXERC").equals("ÚLTIMO")) {
+                    if (!csvRow.get("ORDEM_EXERC").equals("ÚLTIMO") || (LocalDate.parse(csvRow.get("DT_INI_EXERC"))
+                            .until(LocalDate.parse(csvRow.get("DT_REFER"))).toTotalMonths() > 4)) {
                         continue;
                     }
                     // Parse Row
                     var sanitizedCnpj = csvRow.get("CNPJ_CIA").replaceAll("\\D", "");
-                    var referenceStartDate = Date.valueOf((LocalDate.parse(csvRow.get("DT_REFER")).minusMonths(3)));
+                    var referenceStartDate = Date.valueOf(csvRow.get("DT_INI_EXERC"));
                     var referenceEndDate = Date.valueOf(csvRow.get("DT_REFER"));
                     var coin = csvRow.get("MOEDA");
                     var scale = csvRow.get("ESCALA_MOEDA");

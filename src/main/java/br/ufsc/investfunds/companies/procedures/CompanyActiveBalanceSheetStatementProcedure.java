@@ -12,6 +12,7 @@ import java.util.logging.Logger;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.QuoteMode;
 import org.apache.commons.collections4.ListUtils;
 
 public class CompanyActiveBalanceSheetStatementProcedure {
@@ -20,12 +21,11 @@ public class CompanyActiveBalanceSheetStatementProcedure {
 
     public static void doRun(Connection conn, Path filePath) throws IOException, SQLException {
         // Load Query
-        var query = new String(
-                CompanyActiveBalanceSheetStatementProcedure.class.getResourceAsStream("/sql/insertBPA.sql").readAllBytes(),
-                "UTF-8");
+        var query = new String(CompanyActiveBalanceSheetStatementProcedure.class
+                .getResourceAsStream("/sql/insertBPA.sql").readAllBytes(), "UTF-8");
         // Read from File
         var csvReader = CSVParser.parse(filePath, StandardCharsets.ISO_8859_1,
-                CSVFormat.DEFAULT.withDelimiter(';').withFirstRecordAsHeader());
+                CSVFormat.MYSQL.withDelimiter(';').withFirstRecordAsHeader());
         // Define Insert
         try {
             // Disable Autocommit
@@ -36,18 +36,18 @@ public class CompanyActiveBalanceSheetStatementProcedure {
             final var BATCH_SIZE = 1000;
             var chunkRows = ListUtils.partition(csvReader.getRecords(), BATCH_SIZE);
             LOGGER.info(String.format("Will process %d rows", chunkRows.size() * BATCH_SIZE));
-            for (var chunk: chunkRows) {
+            for (var chunk : chunkRows) {
                 // Clear Batch
                 stmt.clearBatch();
                 for (var csvRow : chunk) {
                     // Check Row is Valid
                     // System.out.println();
-                    if (!csvRow.get("ORDEM_EXERC").equals("ÚLTIMO") || (LocalDate.parse(csvRow.get("DT_INI_EXERC")).until(LocalDate.parse(csvRow.get("DT_REFER"))).toTotalMonths() > 4)) {
+                    if (!csvRow.get("ORDEM_EXERC").equals("ÚLTIMO")) {
                         continue;
                     }
                     // Parse Row
                     var sanitizedCnpj = csvRow.get("CNPJ_CIA").replaceAll("\\D", "");
-                    var referenceStartDate = Date.valueOf(csvRow.get("DT_INI_EXERC"));
+                    var referenceStartDate = Date.valueOf((LocalDate.parse(csvRow.get("DT_REFER")).minusMonths(3)));
                     var referenceEndDate = Date.valueOf(csvRow.get("DT_REFER"));
                     var coin = csvRow.get("MOEDA");
                     var scale = csvRow.get("ESCALA_MOEDA");
