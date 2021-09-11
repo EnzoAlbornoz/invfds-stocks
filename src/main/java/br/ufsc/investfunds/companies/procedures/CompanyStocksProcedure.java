@@ -16,6 +16,7 @@ import java.sql.Connection;
 import java.sql.Date;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.time.Period;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,6 +25,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import org.apache.commons.lang3.function.Failable;
+
 import net.lingala.zip4j.ZipFile;
 
 public class CompanyStocksProcedure {
@@ -50,16 +54,15 @@ public class CompanyStocksProcedure {
                 lastStockPriceDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))));
         var today = LocalDate.now().withDayOfMonth(2);
         // Iterate Over Months, Downloading the Updates
-        var downloadURIStream = new ArrayList<URI>();
         // Define Download URI Stream
-        for (var itDate = lastStockPriceDate; itDate.withDayOfMonth(1).isBefore(today); itDate = itDate.plusMonths(1)) {
-            // Define URI to download
-            var downloadURI = new URI(
-                    String.format("http://bvmf.bmfbovespa.com.br/InstDados/SerHist/COTAHIST_M%02d%04d.ZIP",
-                            itDate.getMonthValue(), itDate.getYear()));
-            // Insert then in stream
-            downloadURIStream.add(downloadURI);
-        }
+        List<URI> downloadURIStream = Failable.stream(lastStockPriceDate.withDayOfMonth(1).datesUntil(today, Period.ofMonths(1)))
+                .map((itDate) -> {
+                    // Define URI to download
+                    var downloadURI = new URI(
+                            String.format("http://bvmf.bmfbovespa.com.br/InstDados/SerHist/COTAHIST_M%02d%04d.ZIP",
+                                    itDate.getMonthValue(), itDate.getYear()));
+                    return downloadURI;
+                }).collect(Collectors.toList());
         // Define Extraction Folder
         var extractionFolder = cvmPath.resolve("STOCK/PRICES/");
         extractionFolder.toFile().mkdirs();
